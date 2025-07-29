@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -10,6 +10,8 @@ import { Slider } from "@/components/ui/slider";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { Checkbox } from "@/components/ui/checkbox";
+import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
+import { LineChart, Line, AreaChart, Area, CartesianGrid, XAxis, YAxis, ResponsiveContainer } from "recharts";
 import {
   FileText,
   CheckCircle,
@@ -43,6 +45,27 @@ const Dashboard = () => {
   const [profile] = useState(mockProfile);
   const [extractions] = useState(mockExtractions);
   
+  // Estados para gráficos
+  const [performanceData, setPerformanceData] = useState([
+    { time: '10:00', cpu: 20, memory: 45 },
+    { time: '10:05', cpu: 25, memory: 50 },
+    { time: '10:10', cpu: 30, memory: 55 },
+    { time: '10:15', cpu: 28, memory: 52 },
+    { time: '10:20', cpu: 35, memory: 60 },
+    { time: '10:25', cpu: 32, memory: 58 },
+    { time: '10:30', cpu: 27, memory: 48 }
+  ]);
+  
+  const [activityData, setActivityData] = useState([
+    { time: '10:00', downloads: 5, extractions: 3 },
+    { time: '10:05', downloads: 8, extractions: 6 },
+    { time: '10:10', downloads: 12, extractions: 8 },
+    { time: '10:15', downloads: 10, extractions: 7 },
+    { time: '10:20', downloads: 15, extractions: 12 },
+    { time: '10:25', downloads: 18, extractions: 14 },
+    { time: '10:30', downloads: 13, extractions: 9 }
+  ]);
+  
   // Estados para configurações
   const [timeouts, setTimeouts] = useState({
     pageLoad: [30],
@@ -69,7 +92,11 @@ const Dashboard = () => {
     arquivado: false,
     baixado: false
   });
-  const [legalParties, setLegalParties] = useState(['ltda', 's/a', 'banco']);
+  const [legalParties, setLegalParties] = useState({
+    empresas: ['ltda', 's/a', 'eireli'],
+    bancos: ['banco', 'caixa', 'santander'],
+    governo: ['união', 'estado', 'município']
+  });
   const [newLegalParty, setNewLegalParty] = useState('');
   
   // Workers mock data
@@ -104,6 +131,35 @@ const Dashboard = () => {
       year: 'numeric'
     });
   };
+
+  // Simulação de atualizações em tempo real
+  useEffect(() => {
+    const interval = setInterval(() => {
+      const now = new Date();
+      const timeStr = `${now.getHours()}:${now.getMinutes().toString().padStart(2, '0')}`;
+      
+      // Novo ponto de performance
+      const newPerformancePoint = {
+        time: timeStr,
+        cpu: Math.floor(Math.random() * 60) + 10,
+        memory: Math.floor(Math.random() * 40) + 30
+      };
+      
+      // Novo ponto de atividade
+      const newActivityPoint = {
+        time: timeStr,
+        downloads: Math.floor(Math.random() * 15) + 5,
+        extractions: Math.floor(Math.random() * 10) + 3
+      };
+      
+      setPerformanceData(oldData => [...oldData.slice(1), newPerformancePoint]);
+      setActivityData(oldData => [...oldData.slice(1), newActivityPoint]);
+      
+      console.log('Simulando atualização de gráficos...');
+    }, 5000);
+
+    return () => clearInterval(interval);
+  }, []);
 
   return (
     <div className="min-h-screen bg-background">
@@ -242,6 +298,101 @@ const Dashboard = () => {
                 </div>
               </CardContent>
             </Card>
+
+            {/* Gráficos de Performance */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <Card className="shadow-card">
+                <CardHeader>
+                  <CardTitle className="text-xl">Performance do Sistema</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <ChartContainer
+                    config={{
+                      cpu: {
+                        label: "CPU",
+                        color: "hsl(var(--primary))",
+                      },
+                      memory: {
+                        label: "Memória",
+                        color: "hsl(var(--destructive))",
+                      },
+                    }}
+                    className="h-[300px]"
+                  >
+                    <ResponsiveContainer width="100%" height="100%">
+                      <LineChart data={performanceData}>
+                        <CartesianGrid strokeDasharray="3 3" />
+                        <XAxis dataKey="time" />
+                        <YAxis />
+                        <ChartTooltip content={<ChartTooltipContent />} />
+                        <Line 
+                          type="monotone" 
+                          dataKey="cpu" 
+                          stroke="hsl(var(--primary))" 
+                          strokeWidth={2}
+                          name="CPU (%)"
+                        />
+                        <Line 
+                          type="monotone" 
+                          dataKey="memory" 
+                          stroke="hsl(var(--destructive))" 
+                          strokeWidth={2}
+                          name="Memória (%)"
+                        />
+                      </LineChart>
+                    </ResponsiveContainer>
+                  </ChartContainer>
+                </CardContent>
+              </Card>
+
+              <Card className="shadow-card">
+                <CardHeader>
+                  <CardTitle className="text-xl">Atividade em Tempo Real</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <ChartContainer
+                    config={{
+                      downloads: {
+                        label: "Downloads",
+                        color: "hsl(var(--primary))",
+                      },
+                      extractions: {
+                        label: "Extrações",
+                        color: "hsl(var(--accent))",
+                      },
+                    }}
+                    className="h-[300px]"
+                  >
+                    <ResponsiveContainer width="100%" height="100%">
+                      <AreaChart data={activityData}>
+                        <CartesianGrid strokeDasharray="3 3" />
+                        <XAxis dataKey="time" />
+                        <YAxis />
+                        <ChartTooltip content={<ChartTooltipContent />} />
+                        <Area 
+                          type="monotone" 
+                          dataKey="downloads" 
+                          stackId="1"
+                          stroke="hsl(var(--primary))" 
+                          fill="hsl(var(--primary))"
+                          fillOpacity={0.6}
+                          name="Downloads"
+                        />
+                        <Area 
+                          type="monotone" 
+                          dataKey="extractions" 
+                          stackId="1"
+                          stroke="hsl(var(--accent))" 
+                          fill="hsl(var(--accent))"
+                          fillOpacity={0.6}
+                          name="Extrações"
+                        />
+                      </AreaChart>
+                    </ResponsiveContainer>
+                  </ChartContainer>
+                </CardContent>
+              </Card>
+            </div>
 
             {/* Botões de Ação */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -565,25 +716,35 @@ const Dashboard = () => {
                   </div>
                   
                   <div className="space-y-4">
-                    <Label>Partes Jurídicas</Label>
-                    <div className="flex flex-wrap gap-2 mb-4">
-                      {legalParties.map((party, index) => (
-                        <Badge key={index} variant="secondary" className="flex items-center gap-1">
-                          {party}
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            className="h-4 w-4 p-0 hover:bg-destructive hover:text-destructive-foreground"
-                            onClick={() => {
-                              setLegalParties(prev => prev.filter((_, i) => i !== index));
-                              console.log('Parte jurídica removida:', party);
-                            }}
-                          >
-                            <X className="h-3 w-3" />
-                          </Button>
-                        </Badge>
-                      ))}
-                    </div>
+                    <Label>Partes Jurídicas (Categorizadas)</Label>
+                    
+                    {Object.entries(legalParties).map(([category, words]) => (
+                      <div key={category} className="space-y-2">
+                        <h4 className="text-sm font-medium capitalize text-muted-foreground">{category}</h4>
+                        <div className="flex flex-wrap gap-2 mb-2">
+                          {words.map((word, index) => (
+                            <Badge key={index} variant="secondary" className="flex items-center gap-1">
+                              {word}
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                className="h-4 w-4 p-0 hover:bg-destructive hover:text-destructive-foreground"
+                                onClick={() => {
+                                  setLegalParties(prev => ({
+                                    ...prev,
+                                    [category]: prev[category].filter((_, i) => i !== index)
+                                  }));
+                                  console.log('Remover palavra:', word);
+                                }}
+                              >
+                                <X className="h-3 w-3" />
+                              </Button>
+                            </Badge>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                    
                     <div className="flex gap-2">
                       <Input
                         placeholder="Ex: ltda, s/a, banco"
@@ -593,7 +754,11 @@ const Dashboard = () => {
                       <Button
                         onClick={() => {
                           if (newLegalParty.trim()) {
-                            setLegalParties(prev => [...prev, newLegalParty.trim()]);
+                            // Adiciona na categoria "empresas" por padrão
+                            setLegalParties(prev => ({
+                              ...prev,
+                              empresas: [...prev.empresas, newLegalParty.trim()]
+                            }));
                             console.log('Adicionar parte jurídica:', newLegalParty.trim());
                             setNewLegalParty('');
                           }
