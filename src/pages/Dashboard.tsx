@@ -3,6 +3,13 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import { Label } from "@/components/ui/label";
+import { Slider } from "@/components/ui/slider";
+import { Input } from "@/components/ui/input";
+import { Switch } from "@/components/ui/switch";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   FileText,
   CheckCircle,
@@ -12,7 +19,10 @@ import {
   BarChart3,
   Download,
   Settings,
-  LogOut
+  LogOut,
+  Circle,
+  X,
+  Plus
 } from "lucide-react";
 
 // Dados simulados
@@ -32,6 +42,43 @@ const mockExtractions = [
 const Dashboard = () => {
   const [profile] = useState(mockProfile);
   const [extractions] = useState(mockExtractions);
+  
+  // Estados para configurações
+  const [timeouts, setTimeouts] = useState({
+    pageLoad: [30],
+    processQuery: [30],
+    elementWait: [30]
+  });
+  const [retrySettings, setRetrySettings] = useState({
+    maxRetries: 3,
+    retryInterval: 5,
+    useExponentialBackoff: false
+  });
+  const [browserSettings, setBrowserSettings] = useState({
+    useIsolatedProfile: true,
+    headlessMode: true,
+    disableImages: false
+  });
+  
+  // Estados para filtros
+  const [suffixesToRemove, setSuffixesToRemove] = useState(['.0500', '.0000']);
+  const [newSuffix, setNewSuffix] = useState('');
+  const [yearFilter, setYearFilter] = useState({ from: 2020, to: 2025 });
+  const [statusFilters, setStatusFilters] = useState({
+    extinto: false,
+    arquivado: false,
+    baixado: false
+  });
+  const [legalParties, setLegalParties] = useState(['ltda', 's/a', 'banco']);
+  const [newLegalParty, setNewLegalParty] = useState('');
+  
+  // Workers mock data
+  const workers = [
+    { name: 'File Watcher', status: 'Ativo' },
+    { name: 'Download Worker', status: 'Ativo' },
+    { name: 'Extraction Worker', status: 'Ativo' },
+    { name: 'System Monitor', status: 'Ativo' }
+  ];
 
   const completedExtractions = extractions.filter(e => e.extraction_status === 'completed').length;
   const processingExtractions = extractions.filter(e => e.extraction_status === 'processing').length;
@@ -102,135 +149,466 @@ const Dashboard = () => {
           </p>
         </div>
 
-        {/* Cards de Estatísticas */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          <Card className="shadow-card">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Extrações Usadas</CardTitle>
-              <FileText className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{profile.extractions_used}</div>
-              <div className="text-xs text-muted-foreground mb-2">
-                de {profile.extractions_limit} disponíveis
-              </div>
-              <Progress 
-                value={(profile.extractions_used / profile.extractions_limit) * 100} 
-                className="w-full"
-              />
-            </CardContent>
-          </Card>
+        <Tabs defaultValue="monitoramento" className="w-full">
+          <TabsList className="grid w-full grid-cols-3">
+            <TabsTrigger value="monitoramento">Monitoramento</TabsTrigger>
+            <TabsTrigger value="configuracoes">Configurações</TabsTrigger>
+            <TabsTrigger value="filtros">Filtros</TabsTrigger>
+          </TabsList>
 
-          <Card className="shadow-card">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Concluídas</CardTitle>
-              <CheckCircle className="h-4 w-4 text-primary" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-primary">{completedExtractions}</div>
-              <p className="text-xs text-muted-foreground">
-                extrações finalizadas
-              </p>
-            </CardContent>
-          </Card>
+          <TabsContent value="monitoramento" className="space-y-8">
+            {/* Cards de Estatísticas */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+              <Card className="shadow-card">
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">Extrações Usadas</CardTitle>
+                  <FileText className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">{profile.extractions_used}</div>
+                  <div className="text-xs text-muted-foreground mb-2">
+                    de {profile.extractions_limit} disponíveis
+                  </div>
+                  <Progress 
+                    value={(profile.extractions_used / profile.extractions_limit) * 100} 
+                    className="w-full"
+                  />
+                </CardContent>
+              </Card>
 
-          <Card className="shadow-card">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Processando</CardTitle>
-              <Clock className="h-4 w-4 text-blue-600" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-blue-600">{processingExtractions}</div>
-              <p className="text-xs text-muted-foreground">
-                em andamento
-              </p>
-            </CardContent>
-          </Card>
+              <Card className="shadow-card">
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">Concluídas</CardTitle>
+                  <CheckCircle className="h-4 w-4 text-primary" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold text-primary">{completedExtractions}</div>
+                  <p className="text-xs text-muted-foreground">
+                    extrações finalizadas
+                  </p>
+                </CardContent>
+              </Card>
 
-          <Card className="shadow-card">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Falharam</CardTitle>
-              <AlertCircle className="h-4 w-4 text-destructive" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-destructive">{failedExtractions}</div>
-              <p className="text-xs text-muted-foreground">
-                com erro
-              </p>
-            </CardContent>
-          </Card>
-        </div>
+              <Card className="shadow-card">
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">Processando</CardTitle>
+                  <Clock className="h-4 w-4 text-blue-600" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold text-blue-600">{processingExtractions}</div>
+                  <p className="text-xs text-muted-foreground">
+                    em andamento
+                  </p>
+                </CardContent>
+              </Card>
 
-        {/* Botões de Ação */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-          <Button 
-            className="h-24 text-lg bg-gradient-primary hover:shadow-glow transition-all duration-300"
-            onClick={() => console.log('Nova Extração clicado')}
-          >
-            <Upload className="h-6 w-6 mr-3" />
-            Nova Extração
-          </Button>
-          
-          <Button 
-            variant="outline" 
-            className="h-24 text-lg"
-            onClick={() => console.log('Analytics clicado')}
-          >
-            <BarChart3 className="h-6 w-6 mr-3" />
-            Analytics
-          </Button>
-          
-          <Button 
-            variant="outline" 
-            className="h-24 text-lg"
-            onClick={() => console.log('Exportar Dados clicado')}
-          >
-            <Download className="h-6 w-6 mr-3" />
-            Exportar Dados
-          </Button>
-        </div>
+              <Card className="shadow-card">
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">Falharam</CardTitle>
+                  <AlertCircle className="h-4 w-4 text-destructive" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold text-destructive">{failedExtractions}</div>
+                  <p className="text-xs text-muted-foreground">
+                    com erro
+                  </p>
+                </CardContent>
+              </Card>
+            </div>
 
-        {/* Tabela de Extrações Recentes */}
-        <Card className="shadow-card">
-          <CardHeader>
-            <CardTitle className="text-xl">Extrações Recentes</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {extractions.length === 0 ? (
-              <div className="text-center py-8">
-                <FileText className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-                <p className="text-muted-foreground">Nenhuma extração encontrada</p>
-              </div>
-            ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead>
-                    <tr className="border-b border-border">
-                      <th className="text-left py-3 px-4 font-medium">Número do Processo</th>
-                      <th className="text-left py-3 px-4 font-medium">Data</th>
-                      <th className="text-left py-3 px-4 font-medium">Status</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {extractions.map((extraction) => (
-                      <tr key={extraction.id} className="border-b border-border hover:bg-muted/50">
-                        <td className="py-3 px-4 font-mono text-sm">
-                          {extraction.process_number}
-                        </td>
-                        <td className="py-3 px-4 text-sm">
-                          {formatDate(extraction.created_at)}
-                        </td>
-                        <td className="py-3 px-4">
-                          {getStatusBadge(extraction.extraction_status)}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </CardContent>
-        </Card>
+            {/* Status dos Workers */}
+            <Card className="shadow-card">
+              <CardHeader>
+                <CardTitle className="text-xl">Status dos Workers</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                  {workers.map((worker) => (
+                    <div key={worker.name} className="flex flex-col items-center space-y-3 p-4 rounded-lg border border-border">
+                      <div className="flex items-center gap-2">
+                        <Circle className="h-3 w-3 fill-primary text-primary" />
+                        <span className="text-sm font-medium">{worker.name}</span>
+                      </div>
+                      <span className="text-xs text-muted-foreground">{worker.status}</span>
+                      <Button 
+                        size="sm" 
+                        variant="outline"
+                        onClick={() => console.log('Restart solicitado para', worker.name)}
+                      >
+                        Restart
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Botões de Ação */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <Button 
+                className="h-24 text-lg bg-gradient-primary hover:shadow-glow transition-all duration-300"
+                onClick={() => console.log('Nova Extração clicado')}
+              >
+                <Upload className="h-6 w-6 mr-3" />
+                Nova Extração
+              </Button>
+              
+              <Button 
+                variant="outline" 
+                className="h-24 text-lg"
+                onClick={() => console.log('Analytics clicado')}
+              >
+                <BarChart3 className="h-6 w-6 mr-3" />
+                Analytics
+              </Button>
+              
+              <Button 
+                variant="outline" 
+                className="h-24 text-lg"
+                onClick={() => console.log('Exportar Dados clicado')}
+              >
+                <Download className="h-6 w-6 mr-3" />
+                Exportar Dados
+              </Button>
+            </div>
+
+            {/* Tabela de Extrações Recentes */}
+            <Card className="shadow-card">
+              <CardHeader>
+                <CardTitle className="text-xl">Extrações Recentes</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {extractions.length === 0 ? (
+                  <div className="text-center py-8">
+                    <FileText className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                    <p className="text-muted-foreground">Nenhuma extração encontrada</p>
+                  </div>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <table className="w-full">
+                      <thead>
+                        <tr className="border-b border-border">
+                          <th className="text-left py-3 px-4 font-medium">Número do Processo</th>
+                          <th className="text-left py-3 px-4 font-medium">Data</th>
+                          <th className="text-left py-3 px-4 font-medium">Status</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {extractions.map((extraction) => (
+                          <tr key={extraction.id} className="border-b border-border hover:bg-muted/50">
+                            <td className="py-3 px-4 font-mono text-sm">
+                              {extraction.process_number}
+                            </td>
+                            <td className="py-3 px-4 text-sm">
+                              {formatDate(extraction.created_at)}
+                            </td>
+                            <td className="py-3 px-4">
+                              {getStatusBadge(extraction.extraction_status)}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="configuracoes" className="space-y-6">
+            <Accordion type="single" collapsible className="w-full">
+              <AccordionItem value="performance">
+                <AccordionTrigger>Performance e Timeouts</AccordionTrigger>
+                <AccordionContent className="space-y-6">
+                  <div className="space-y-2">
+                    <Label htmlFor="pageLoad">Timeout de Carregamento de Página: {timeouts.pageLoad[0]}s</Label>
+                    <Slider
+                      id="pageLoad"
+                      min={5}
+                      max={120}
+                      step={1}
+                      value={timeouts.pageLoad}
+                      onValueChange={(value) => {
+                        setTimeouts(prev => ({ ...prev, pageLoad: value }));
+                        console.log('Timeout Carregamento de Página alterado para:', value[0]);
+                      }}
+                      className="w-full"
+                    />
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="processQuery">Timeout de Consulta de Processo: {timeouts.processQuery[0]}s</Label>
+                    <Slider
+                      id="processQuery"
+                      min={5}
+                      max={120}
+                      step={1}
+                      value={timeouts.processQuery}
+                      onValueChange={(value) => {
+                        setTimeouts(prev => ({ ...prev, processQuery: value }));
+                        console.log('Timeout Consulta de Processo alterado para:', value[0]);
+                      }}
+                      className="w-full"
+                    />
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="elementWait">Timeout para Aguardar Elemento: {timeouts.elementWait[0]}s</Label>
+                    <Slider
+                      id="elementWait"
+                      min={5}
+                      max={120}
+                      step={1}
+                      value={timeouts.elementWait}
+                      onValueChange={(value) => {
+                        setTimeouts(prev => ({ ...prev, elementWait: value }));
+                        console.log('Timeout Aguardar Elemento alterado para:', value[0]);
+                      }}
+                      className="w-full"
+                    />
+                  </div>
+                </AccordionContent>
+              </AccordionItem>
+
+              <AccordionItem value="retry">
+                <AccordionTrigger>Política de Tentativas (Retry)</AccordionTrigger>
+                <AccordionContent className="space-y-6">
+                  <div className="space-y-2">
+                    <Label htmlFor="maxRetries">Máximo de Tentativas</Label>
+                    <Input
+                      id="maxRetries"
+                      type="number"
+                      value={retrySettings.maxRetries}
+                      onChange={(e) => {
+                        const value = parseInt(e.target.value) || 0;
+                        setRetrySettings(prev => ({ ...prev, maxRetries: value }));
+                        console.log('Máximo de Tentativas alterado para:', value);
+                      }}
+                      min={1}
+                      max={10}
+                    />
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="retryInterval">Intervalo entre Tentativas (segundos)</Label>
+                    <Input
+                      id="retryInterval"
+                      type="number"
+                      value={retrySettings.retryInterval}
+                      onChange={(e) => {
+                        const value = parseInt(e.target.value) || 0;
+                        setRetrySettings(prev => ({ ...prev, retryInterval: value }));
+                        console.log('Intervalo entre Tentativas alterado para:', value);
+                      }}
+                      min={1}
+                      max={60}
+                    />
+                  </div>
+                  
+                  <div className="flex items-center space-x-2">
+                    <Switch
+                      id="exponentialBackoff"
+                      checked={retrySettings.useExponentialBackoff}
+                      onCheckedChange={(checked) => {
+                        setRetrySettings(prev => ({ ...prev, useExponentialBackoff: checked }));
+                        console.log('Usar Backoff Exponencial alterado para:', checked);
+                      }}
+                    />
+                    <Label htmlFor="exponentialBackoff">Usar Backoff Exponencial</Label>
+                  </div>
+                </AccordionContent>
+              </AccordionItem>
+
+              <AccordionItem value="browser">
+                <AccordionTrigger>Opções do Navegador (Chrome)</AccordionTrigger>
+                <AccordionContent className="space-y-6">
+                  <div className="flex items-center space-x-2">
+                    <Switch
+                      id="isolatedProfile"
+                      checked={browserSettings.useIsolatedProfile}
+                      onCheckedChange={(checked) => {
+                        setBrowserSettings(prev => ({ ...prev, useIsolatedProfile: checked }));
+                        console.log('Usar perfil isolado alterado para:', checked);
+                      }}
+                    />
+                    <Label htmlFor="isolatedProfile">Usar perfil isolado</Label>
+                  </div>
+                  
+                  <div className="flex items-center space-x-2">
+                    <Switch
+                      id="headlessMode"
+                      checked={browserSettings.headlessMode}
+                      onCheckedChange={(checked) => {
+                        setBrowserSettings(prev => ({ ...prev, headlessMode: checked }));
+                        console.log('Modo Headless alterado para:', checked);
+                      }}
+                    />
+                    <Label htmlFor="headlessMode">Modo Headless (sem janela)</Label>
+                  </div>
+                  
+                  <div className="flex items-center space-x-2">
+                    <Switch
+                      id="disableImages"
+                      checked={browserSettings.disableImages}
+                      onCheckedChange={(checked) => {
+                        setBrowserSettings(prev => ({ ...prev, disableImages: checked }));
+                        console.log('Desabilitar carregamento de imagens alterado para:', checked);
+                      }}
+                    />
+                    <Label htmlFor="disableImages">Desabilitar carregamento de imagens</Label>
+                  </div>
+                </AccordionContent>
+              </AccordionItem>
+            </Accordion>
+          </TabsContent>
+
+          <TabsContent value="filtros" className="space-y-6">
+            <Accordion type="single" collapsible className="w-full">
+              <AccordionItem value="cleanup">
+                <AccordionTrigger>Filtros de Limpeza Inicial</AccordionTrigger>
+                <AccordionContent className="space-y-6">
+                  <div className="space-y-4">
+                    <Label>Sufixos a Remover</Label>
+                    <div className="flex flex-wrap gap-2 mb-4">
+                      {suffixesToRemove.map((suffix, index) => (
+                        <Badge key={index} variant="secondary" className="flex items-center gap-1">
+                          {suffix}
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="h-4 w-4 p-0 hover:bg-destructive hover:text-destructive-foreground"
+                            onClick={() => {
+                              setSuffixesToRemove(prev => prev.filter((_, i) => i !== index));
+                              console.log('Sufixo removido:', suffix);
+                            }}
+                          >
+                            <X className="h-3 w-3" />
+                          </Button>
+                        </Badge>
+                      ))}
+                    </div>
+                    <div className="flex gap-2">
+                      <Input
+                        placeholder="Ex: .0500"
+                        value={newSuffix}
+                        onChange={(e) => setNewSuffix(e.target.value)}
+                      />
+                      <Button
+                        onClick={() => {
+                          if (newSuffix.trim()) {
+                            setSuffixesToRemove(prev => [...prev, newSuffix.trim()]);
+                            console.log('Adicionar sufixo:', newSuffix.trim());
+                            setNewSuffix('');
+                          }
+                        }}
+                      >
+                        <Plus className="h-4 w-4 mr-2" />
+                        Adicionar
+                      </Button>
+                    </div>
+                  </div>
+                  
+                  <div className="space-y-4">
+                    <Label>Filtro por Período (Anos a Excluir)</Label>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="yearFrom">De</Label>
+                        <Input
+                          id="yearFrom"
+                          type="number"
+                          value={yearFilter.from}
+                          onChange={(e) => {
+                            const value = parseInt(e.target.value) || 2020;
+                            setYearFilter(prev => ({ ...prev, from: value }));
+                            console.log('Ano inicial alterado para:', value);
+                          }}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="yearTo">Até</Label>
+                        <Input
+                          id="yearTo"
+                          type="number"
+                          value={yearFilter.to}
+                          onChange={(e) => {
+                            const value = parseInt(e.target.value) || 2025;
+                            setYearFilter(prev => ({ ...prev, to: value }));
+                            console.log('Ano final alterado para:', value);
+                          }}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </AccordionContent>
+              </AccordionItem>
+
+              <AccordionItem value="process">
+                <AccordionTrigger>Filtros de Processo Principal</AccordionTrigger>
+                <AccordionContent className="space-y-6">
+                  <div className="space-y-4">
+                    <Label>Status do Processo</Label>
+                    <div className="space-y-3">
+                      {Object.entries(statusFilters).map(([status, checked]) => (
+                        <div key={status} className="flex items-center space-x-2">
+                          <Checkbox
+                            id={status}
+                            checked={checked}
+                            onCheckedChange={(checkedValue) => {
+                              setStatusFilters(prev => ({ ...prev, [status]: !!checkedValue }));
+                              console.log('Filtro status', status, 'alterado para:', !!checkedValue);
+                            }}
+                          />
+                          <Label htmlFor={status} className="capitalize">{status}</Label>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                  
+                  <div className="space-y-4">
+                    <Label>Partes Jurídicas</Label>
+                    <div className="flex flex-wrap gap-2 mb-4">
+                      {legalParties.map((party, index) => (
+                        <Badge key={index} variant="secondary" className="flex items-center gap-1">
+                          {party}
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="h-4 w-4 p-0 hover:bg-destructive hover:text-destructive-foreground"
+                            onClick={() => {
+                              setLegalParties(prev => prev.filter((_, i) => i !== index));
+                              console.log('Parte jurídica removida:', party);
+                            }}
+                          >
+                            <X className="h-3 w-3" />
+                          </Button>
+                        </Badge>
+                      ))}
+                    </div>
+                    <div className="flex gap-2">
+                      <Input
+                        placeholder="Ex: ltda, s/a, banco"
+                        value={newLegalParty}
+                        onChange={(e) => setNewLegalParty(e.target.value)}
+                      />
+                      <Button
+                        onClick={() => {
+                          if (newLegalParty.trim()) {
+                            setLegalParties(prev => [...prev, newLegalParty.trim()]);
+                            console.log('Adicionar parte jurídica:', newLegalParty.trim());
+                            setNewLegalParty('');
+                          }
+                        }}
+                      >
+                        <Plus className="h-4 w-4 mr-2" />
+                        Adicionar
+                      </Button>
+                    </div>
+                  </div>
+                </AccordionContent>
+              </AccordionItem>
+            </Accordion>
+          </TabsContent>
+        </Tabs>
       </div>
     </div>
   );
